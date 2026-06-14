@@ -360,16 +360,37 @@ splitwise/
 
 ## 11. Testing Plan
 
-### Backend
-- Manual test each endpoint with curl/Postman after implementation
-- Test balance calculator with: zero balance, one debtor, circular debts, after settlement
+### Manual Test Cases
 
-### Frontend
-- Walk through each user flow in browser:
-  1. Register → login → create group → add member
-  2. Add expense (each split type) → verify splits
-  3. View balances → settle → verify balance updates
-  4. Open expense → send chat message → verify real-time delivery
+All testing is manual for this MVP. Use Postman or Thunder Client for API tests.
+
+| # | Test Case | Expected Result |
+|---|-----------|----------------|
+| 1 | Register user → login → receive JWT | 201 on register, 200 on login, token in response |
+| 2 | Create group → invite user by email → confirm member appears | Group created, member visible in `/groups/:id` |
+| 3 | Remove a member from group | Member gone from membership list |
+| 4 | Add expense (equal split) → check `expense_splits` | Each row has `owed_amount = total / count` |
+| 5 | Add expense (unequal) → amounts must sum to total | 400 error if sum ≠ total; 201 if valid |
+| 6 | Add expense (percentage) → percentages must sum to 100 | 400 error if sum ≠ 100%; 201 if valid |
+| 7 | Add expense (shares) → verify proportional amounts | `owed = (user_shares / total_shares) * total` |
+| 8 | Open expense → send chat message → verify real-time delivery | Second browser tab receives message without refresh |
+| 9 | `GET /groups/:id/balances` → verify simplified debt list | Correct "A owes B ₹X" output, minimised transactions |
+| 10 | Record a settlement → verify balances update | Balance decreases or disappears after settlement |
+| 11 | Delete an expense → verify splits are removed | Expense gone, `expense_splits` rows deleted |
+
+### API Testing
+- Tool: Postman or Thunder Client (VS Code extension)
+- Set `Authorization: Bearer <token>` header on all protected routes
+- Test happy path + error cases (missing fields, wrong credentials, non-member access)
+
+### Balance Calculator Edge Cases
+- All members paid equally → no balances
+- Single debtor → one transaction
+- Circular debts (A→B→C→A) → simplified correctly
+- After settlement → balance reduced accordingly
+
+### No Automated Tests
+No unit/integration test suite required for this MVP scope.
 
 ---
 
@@ -388,18 +409,27 @@ splitwise/
 ## 13. Implementation Log
 
 ### Changes During Build
-*(Updated as implementation progresses)*
 
 | Date | Change | Reason |
 |------|--------|--------|
-| 2026-06-14 | Initial scaffold | Project start |
+| 2026-06-14 | Initial scaffold — backend + frontend | Project start |
+| 2026-06-14 | Fixed CSS `@import` order (Google Fonts before Tailwind) | Vite build warning |
+| 2026-06-14 | Fixed dynamic `import()` in GroupDetail → static import | Build warning + correctness |
+| 2026-06-14 | Added `setup-db.js` helper script | MySQL `CREATE DATABASE` automation |
+| 2026-06-14 | Added `/prompts` folder with AI collaboration docs | Assignment requirement |
 
 ---
 
 ## 14. All Prompts Used
 
-### Session 1 — Initial Build
-- Full product context provided in one message (see user request)
-- Instruction: Build strictly according to context, no scoping questions
-- BUILD_PLAN.md and AI_CONTEXT.md generated first
-- Then executing BUILD_ORDER steps sequentially
+See the `/prompts` folder for the full archive:
+- [`prompts/01_initial_prompt.md`](./prompts/01_initial_prompt.md) — Full product spec prompt used to start the build
+- [`prompts/02_changes.md`](./prompts/02_changes.md) — Changes and follow-up instructions during build
+- [`prompts/03_ai_responses.md`](./prompts/03_ai_responses.md) — Key AI decisions and responses
+
+### Session Summary
+- **Tool used**: Claude (Anthropic) — claude.ai
+- **Session date**: 2026-06-14
+- **Approach**: Full context upfront, strict build order, docs before code
+- **Total files generated**: 69 source files across backend + frontend
+- **Build time**: ~1 session
